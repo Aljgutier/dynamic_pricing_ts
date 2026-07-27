@@ -217,7 +217,7 @@ def fit_demand_estimator(
     # Fit regression model
     # ----------------------------------------------------------
 
-    if ridge_cv == True:
+    if ridge_cv:
         model = RidgeCV(alphas=np.logspace(-4, 2, 25))
     else:
         model = LinearRegression()
@@ -261,7 +261,7 @@ def fit_demand_estimator(
                     x_new = x_new.reshape(-1, 1)
 
             if len(x_new) != len(p_new):
-                raise ValueError("x_new must have the same number of rows " "as p_new.")
+                raise ValueError("x_new must have the same number of rows as p_new.")
 
             features_new = np.column_stack(
                 (
@@ -749,7 +749,7 @@ def select_demand_model(
                 "error_message": None,
             }
 
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
 
             model_diagnostics[model_type] = {
                 "fit_error": np.inf,
@@ -870,20 +870,41 @@ def aggregate_price_demand(
 
 # ------------------ mab_price_optimization_loop -----------------#
 def mab_price_optimization_loop(
-    price_min, price_max, c, F, p_opt, demand_type, demand_params, sigma_log, Nloop=20
+    price_min: float,
+    price_max: float,
+    c: float,
+    F: float,
+    p_opt: float,
+    demand_type: str,
+    demand_params: dict,
+    sigma_log: float,
+    Nloop=20,
+    Nprice_repeat=1,
+    verbose=2,
 ):
-    """_summary_
+    """Multi-armed bandit (MAB) price optimization loop.
+
+    This function simulates a price optimization process using a multi-armed bandit approach.
+    It iteratively selects prices, observes simulated demand, and updates the estimated profit-maximizing price.
+    The function keeps track of price and demand histories, fits demand models, and selects the optimal price based on the estimated demand models.
+
+    The loop consists of an initial exploration phase followed by an exploitation phase where the estimated optimal price is used.
+
+    The function returns a dictionary containing the selected demand model information, including the fitted model, model diagnostics, and the selected model type.
+
 
     Args:
-        price_min (_type_): _description_
-        price_max (_type_): _description_
-        c (_type_): variable demand
-        F (_type_): Fixed price
-        p_opt (_type_): theoretical optimimum price
-        demand_type (_type_): _description_
-        demand_params (_type_): _description_
-        sigma_log (_type_): _description_
-        Nloop (int, optional): _description_. Defaults to 20.
+        price_min (Float): minimum allowable price.
+        price_max (Float): maximum allowable price.
+        c (float): variable cost.
+        F (float): Fixed price
+        p_opt (float): theoretical optimimum price
+        demand_type (float): demand type (linear, constant_elasticit, logit)
+        demand_params (float): _description_
+        sigma_log (float): standard deviation of the log-normal noise added to the demand simulation.
+        Nloop (int), optional): number of iterations of the MAB price optimization loop. Defaults to 20.
+        Nprice_repeat (int, optional): number of times each price is repeated during the initial exploration phase. Defaults to 1.
+        verbose (int) = the verbocity level (default = 2
 
     Returns:
         dict: dictionary containing the selected demand model information, including the fitted model, model diagnostics, and the selected model type, including the following keys:
@@ -910,7 +931,6 @@ def mab_price_optimization_loop(
     p4 = price_min + 0.75 * price_range
     p5 = price_max
 
-    Nprice_repeat = 2
     prices_initial = [
         p1,
         p2,
@@ -1085,7 +1105,8 @@ def mab_price_optimization_loop(
 
         if len(p_fit) < min_fit_obs:
 
-            print("selected_model = none, " "p_opt_hat = nan")
+            if verbose > 1:
+                print("selected_model = none, p_opt_hat = nan")
 
             selected_model_history.append(None)
             model_fit_error_history.append(None)
@@ -1120,7 +1141,8 @@ def mab_price_optimization_loop(
 
         except ValueError as exc:
 
-            print(f"selected_model = none, " f"model selection failed: {exc}")
+            if verbose > 1:
+                print(f"selected_model = none, " f"model selection failed: {exc}")
 
             selected_model_history.append(None)
             model_fit_error_history.append(None)
@@ -1134,7 +1156,7 @@ def mab_price_optimization_loop(
 
             continue
 
-        selected_model_error = model_diagnostics[selected_model_type]["fit_error"]
+        _selected_model_error = model_diagnostics[selected_model_type]["fit_error"]
 
         # ------------------------------------------------------
         # Estimate demand and profit over the price grid
@@ -1260,18 +1282,18 @@ def mab_price_optimization_loop(
         # ------------------------------------------------------
         # Print iteration results
         # ------------------------------------------------------
-
-        print(
-            f"selected_model = {selected_model_type}",
-            f", model_fit_error = {round(model_diagnostics[selected_model_type]["fit_error"],2)}",
-            f", p_opt_hat = {p_opt_hat}",
-            f", p_opt_vhat_i = {p_opt_vhat_i}",
-            f", p_opt_hat_error = {p_opt_hat_error}",
-            f", vhat_opt_i = {vhat_opt_i}",
-            f", inv_umar_i = {inv_umar_i}",
-            f", d_opt_hat = {d_opt_hat}",
-            f", profit_opt_hat = {profit_opt_hat}",
-        )
+        if verbose > 1:
+            print(
+                f"selected_model = {selected_model_type}",
+                f", model_fit_error = {round(model_diagnostics[selected_model_type]["fit_error"],2)}",
+                f", p_opt_hat = {p_opt_hat}",
+                f", p_opt_vhat_i = {p_opt_vhat_i}",
+                f", p_opt_hat_error = {p_opt_hat_error}",
+                f", vhat_opt_i = {vhat_opt_i}",
+                f", inv_umar_i = {inv_umar_i}",
+                f", d_opt_hat = {d_opt_hat}",
+                f", profit_opt_hat = {profit_opt_hat}",
+            )
 
     results_dict = {
         "p_history": p_history,
