@@ -1,6 +1,8 @@
 .DS_Store
 __pycache__/
 .python-version
+.vscode/
+.ipynb_checkpoints/
 references/
 research_notes/
 data_sim_results/
@@ -10,4 +12,4 @@ __pycache__/
 .env
 x_old/
 README_pdf_notes.md
-pdf_tex_md/
+ts_pdf_tex_md/

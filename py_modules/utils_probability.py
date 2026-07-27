@@ -271,7 +271,7 @@ def demand_lognormal_pdf(d, a, v, p, CV):
 
 
 def demand_sample(
-    p: float, a: float, v: float, sigma_log: float, size: int = 1
+    p: float, a: float, v: float, sigma_log: float = 0, size: int = 1
 ) -> np.ndarray:
     """Demand with multiplicative noise.
 
@@ -287,4 +287,8 @@ def demand_sample(
     """
 
     mu_log = np.log(a) - v * np.log(p)
-    return np.exp(mu_log + np.random.normal(0, sigma_log, size=size))
+    
+    if sigma_log == 0:
+        return np.exp(mu_log) * np.ones(size)
+    else:
+        return np.exp(mu_log + np.random.normal(0, sigma_log, size=size))
